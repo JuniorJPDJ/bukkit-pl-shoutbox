@@ -1,13 +1,12 @@
 #!/usr/bin/python
+
 import urllib2, urllib, cookielib, json, sys, thread, getpass, time, datetime, HTMLParser
 
 cj = cookielib.LWPCookieJar()
 opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
 urllib2.install_opener(opener)
 
-line = ""
-pisz = False
-class msgp(HTMLParser.HTMLParser):
+class msgparse(HTMLParser.HTMLParser):
   def handle_starttag(self, tag, attrs):
     for attr in attrs:
       if attr[0] == "data-timestring":
@@ -27,15 +26,36 @@ class msgp(HTMLParser.HTMLParser):
       line = line + data
   def handle_endtag(self, tag):
     if tag == "li":
-      global line
-      global czas
       global pisz
+      global czas
       pisz = False
       if czas != "":
+        global line
+        global wiad
         line = "[" + czas + "] " + line
         czas = ""
-        print unicode(line).encode("utf-8")
+        wiad = wiad + unicode(line).encode("utf-8") + "\n"
       line = ""
+      
+class listparse(HTMLParser.HTMLParser):
+  def handle_starttag(self, tag, attrs):
+    global licz
+    for attr in attrs:
+      if attr[1] == 'listInline':
+        licz = licz + 1
+      elif attr[1] == 'username':
+        if licz == 1:
+          global dodaj
+          dodaj = True
+  def handle_endtag(self, tag):
+    global dodaj
+    dodaj = False
+  def handle_data(self, data):
+    if dodaj:
+      lista.append(data)
+
+def logczas():
+  return "[" + str(datetime.datetime.now().time())[0:-10]+ "] "
 
 print "Zaloguj sie danymi z bukkit.pl"
 print "Jesli wpiszesz bledne dane poprostu nie bedziesz w stanie pisac na czacie"
@@ -52,25 +72,59 @@ def getmsg(*args):
   err = False
   while 1:
     try:
-      output = urllib2.urlopen(urllib2.Request("http://bukkit.pl/taigachat/list.json", urllib.urlencode({"_xfToken":token, "_xfResponseType":"json", "lastrefresh":ref}))).read()
-      msgp().feed(json.loads(output).get("templateHtml").replace("\n",""))
+      output = urllib2.urlopen(urllib2.Request("http://bukkit.pl/taigachat/list.json", urllib.urlencode({"_xfToken":token, "_xfResponseType":"json", "lastrefresh":ref})), timeout=5).read()
+      global line
+      global pisz
+      global wiad
+      line = ""
+      pisz = False
+      wiad = ""
+      msgparse().feed(json.loads(output.replace("\\n","")).get("templateHtml"))
+      if wiad != "":
+        print(wiad),
       ref = json.loads(output).get("lastrefresh")
       if err:
-        print("[" + str(datetime.datetime.now().time())[0:-10]+ "] Pomyslnie pobrano zalegle wiadomosci")
+        print(logczas() + "Pomyslnie pobrano zalegle wiadomosci")
         err = False
+    except KeyboardInterrupt:
+      pass
     except Exception as e:
       if not err:
-        print("[" + str(datetime.datetime.now().time())[0:-10]+ "] Blad pobierania wiadomosci: " +  str(e))
+        print(logczas() + "Blad pobierania wiadomosci: " +  str(e))
       err = True
-    time.sleep(1)
+    time.sleep(2)
 
 thread.start_new_thread(getmsg, ("", ""))
+
+def printlist():
+  global lista
+  global licz
+  global dodaj
+  lista = []
+  licz = -1
+  dodaj = False
+  #print(logczas() + "List not implemented")
+  listparse().feed(json.loads(urllib2.urlopen(urllib2.Request("http://bukkit.pl/shoutbox/", urllib.urlencode({"_xfResponseType":"json", "_xfToken":token,}))).read().replace('\\n','').replace('\\t','')).get("sidebarHtml"))
+  lista.sort()
+  lista1 = lista
+  print(logczas() + "Aktualnie z czatu korzystaja: ")
+  strlista = ""
+  for a in lista:
+    strlista = strlista + a + " "
+  print(logczas() + strlista)
 
 while 1:
   try:
     msg = raw_input()
   except:
-    exit()
+    sys.exit()
   if msg == "/q" or msg == "/quit" or msg == "/exit":
-    exit()
-  urllib2.urlopen(urllib2.Request("http://bukkit.pl/taigachat/post.json", urllib.urlencode({"message":msg, "_xfToken":token, "_xfResponseType":"xml"})))
+    sys.exit()
+  elif msg == "/list":
+    printlist()
+  else:
+    try:
+      urllib2.urlopen(urllib2.Request("http://bukkit.pl/taigachat/post.json", urllib.urlencode({"message":msg, "_xfToken":token, "_xfResponseType":"xml"})), timeout=5)
+    except Exception as e:
+      print(logczas() + "Blad wysylania wiadomosci: " +  str(e))
+      
