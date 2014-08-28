@@ -137,6 +137,7 @@ while 1:
   except:
     sys.exit()
   if msg == "/q" or msg == "/quit" or msg == "/exit":
+    urllib2.urlopen("http://bukkit.pl/logout/?" + urllib.urlencode({"_xfToken":token}))
     sys.exit()
   elif msg == "/list" or msg == "/lista":
     playerlist("komenda")
