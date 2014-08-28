@@ -105,7 +105,7 @@ def playerlist(*args):
     dodaj = False
     try:
       listparse().feed(json.loads(urllib2.urlopen(urllib2.Request("http://bukkit.pl/shoutbox/", urllib.urlencode({"_xfResponseType":"json", "_xfToken":token,}))).read().replace('\\n','').replace('\\t','')).get("sidebarHtml"))
-    except:
+    except Exception as e:
       print(logczas() + "Blad podczas pobierania listy uzytkownikow: " +  str(e))
     lista.sort()
     global lista1
