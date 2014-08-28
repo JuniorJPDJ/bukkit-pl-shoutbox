@@ -16,6 +16,9 @@ class msgp(HTMLParser.HTMLParser):
       elif attr[1] == "username":
         global pisz
         pisz = True
+      elif attr[0] == "alt"
+        if pisz:
+          line = line + data
   def handle_data(self, data):
     global line
     global pisz
@@ -27,9 +30,10 @@ class msgp(HTMLParser.HTMLParser):
       global czas
       global pisz
       pisz = False
-      line = "[" + czas + "] " + line
-      czas = ""
-      print unicode(line).encode("utf-8")
+      if czas != "":
+        line = "[" + czas + "] " + line
+        czas = ""
+        print unicode(line).encode("utf-8")
       line = ""
 
 print "Zaloguj sie danymi z bukkit.pl"
