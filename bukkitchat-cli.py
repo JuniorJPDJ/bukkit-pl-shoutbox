@@ -5,6 +5,7 @@ import urllib2, urllib, cookielib, json, sys, thread, getpass, time, datetime, H
 cj = cookielib.LWPCookieJar()
 opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
 urllib2.install_opener(opener)
+lista1 = []
 
 class msgparse(HTMLParser.HTMLParser):
   def handle_starttag(self, tag, attrs):
@@ -94,24 +95,41 @@ def getmsg(*args):
       err = True
     time.sleep(2)
 
-thread.start_new_thread(getmsg, ("", ""))
+def playerlist(*args):
+  while 1:
+    global lista
+    global licz
+    global dodaj
+    lista = []
+    licz = -1
+    dodaj = False
+    try:
+      listparse().feed(json.loads(urllib2.urlopen(urllib2.Request("http://bukkit.pl/shoutbox/", urllib.urlencode({"_xfResponseType":"json", "_xfToken":token,}))).read().replace('\\n','').replace('\\t','')).get("sidebarHtml"))
+    except:
+      print(logczas() + "Blad podczas pobierania listy uzytkownikow: " +  str(e))
+    lista.sort()
+    global lista1
+    if lista1 != lista and lista1 != []:
+      for a in lista:
+        try:
+          lista1.remove(a)
+        except ValueError:
+          print(logczas() + a + " dolaczyl do czatu")
+      for a in lista1:
+         print(logczas() + a + " opuscil czat")
+    lista1 = lista
+    if args[0] == "komenda":
+      print(logczas() + "Aktualnie z czatu korzystaja: ")
+      strlista = ""
+      for a in lista:
+        strlista = strlista + a + " "
+      print(logczas() + strlista)
+      break
+    else:
+      time.sleep(3)
 
-def printlist():
-  global lista
-  global licz
-  global dodaj
-  lista = []
-  licz = -1
-  dodaj = False
-  #print(logczas() + "List not implemented")
-  listparse().feed(json.loads(urllib2.urlopen(urllib2.Request("http://bukkit.pl/shoutbox/", urllib.urlencode({"_xfResponseType":"json", "_xfToken":token,}))).read().replace('\\n','').replace('\\t','')).get("sidebarHtml"))
-  lista.sort()
-  lista1 = lista
-  print(logczas() + "Aktualnie z czatu korzystaja: ")
-  strlista = ""
-  for a in lista:
-    strlista = strlista + a + " "
-  print(logczas() + strlista)
+thread.start_new_thread(getmsg, ("", ""))
+thread.start_new_thread(playerlist, ("diff", ""))
 
 while 1:
   try:
@@ -120,8 +138,8 @@ while 1:
     sys.exit()
   if msg == "/q" or msg == "/quit" or msg == "/exit":
     sys.exit()
-  elif msg == "/list":
-    printlist()
+  elif msg == "/list" or msg == "/lista":
+    playerlist("komenda")
   else:
     try:
       urllib2.urlopen(urllib2.Request("http://bukkit.pl/taigachat/post.json", urllib.urlencode({"message":msg, "_xfToken":token, "_xfResponseType":"xml"})), timeout=5)
