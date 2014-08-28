@@ -16,9 +16,10 @@ class msgp(HTMLParser.HTMLParser):
       elif attr[1] == "username":
         global pisz
         pisz = True
-      elif attr[0] == "alt"
+      elif attr[0] == "alt":
         if pisz:
-          line = line + data
+          global line
+          line = line + attr[1]
   def handle_data(self, data):
     global line
     global pisz
