@@ -6,20 +6,29 @@ opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
 urllib2.install_opener(opener)
 
 line = ""
+pisz = False
 class msgp(HTMLParser.HTMLParser):
   def handle_starttag(self, tag, attrs):
     for attr in attrs:
       if attr[0] == "data-timestring":
         global czas
         czas = attr[1]
+      elif attr[1] == "username":
+        global pisz
+        pisz = True
   def handle_data(self, data):
     global line
-    line = line + data
+    global pisz
+    if pisz:
+      line = line + data
   def handle_endtag(self, tag):
     if tag == "li":
       global line
       global czas
-      line = "[" + czas + "]" + line[line.find('- ')+3:]
+      global pisz
+      pisz = False
+      line = "[" + czas + "] " + line
+      czas = ""
       print unicode(line).encode("utf-8")
       line = ""
 
@@ -29,7 +38,7 @@ print "PS. Hasla nie widac podczas jego wpisywania"
 login = raw_input("Login: ")
 pw = getpass.getpass("Haslo: ")
 
-token = urllib2.urlopen(urllib2.Request("http://bukkit.pl/login/login", urllib.urlencode({"login":login, "password":pw, "cookie_check":"0", "register":"0", "remember":"0"}))).read()
+token = urllib2.urlopen(urllib2.Request("http://bukkit.pl/login/login", urllib.urlencode({"login":login, "password":pw, "cookie_check":"0", "register":"0", "remember":"1"}))).read()
 token = token[token.find('name="_xfToken')+23:]
 token = token[:token.find('"')]
 
