@@ -6,6 +6,10 @@ opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
 urllib2.install_opener(opener)
 lista1 = []
 
+listref = 4
+msgref = 2
+timeout = 10
+
 def logczas():
   return "[" + str(datetime.datetime.now().time())[0:-10]+ "] "
 
@@ -105,7 +109,7 @@ class loginwindow(tk.Tk):
 loginwindow().mainloop()
 
 try:
-  token = urllib2.urlopen(urllib2.Request("http://bukkit.pl/login/login", urllib.urlencode({"login":login, "password":pw, "cookie_check":"0", "register":"0", "remember":"1"})), timeout=10).read()
+  token = urllib2.urlopen(urllib2.Request("http://bukkit.pl/login/login", urllib.urlencode({"login":login, "password":pw, "cookie_check":"0", "register":"0", "remember":"1"})), timeout=timeout).read()
   token = token[token.find('name="_xfToken')+23:]
   token = token[:token.find('"')]
 except Exception as e:
@@ -130,7 +134,7 @@ class chatwindow(tk.Tk):
         playerlist("komenda")
       else:
         try:
-          urllib2.urlopen(urllib2.Request("http://bukkit.pl/taigachat/post.json", urllib.urlencode({"message":msg, "_xfToken":token, "_xfResponseType":"xml"})), timeout=10)
+          urllib2.urlopen(urllib2.Request("http://bukkit.pl/taigachat/post.json", urllib.urlencode({"message":msg, "_xfToken":token, "_xfResponseType":"xml"})), timeout=timeout)
         except Exception as e:
           print(logczas() + "Blad wysylania wiadomosci: " +  str(e))
     
@@ -153,7 +157,7 @@ class chatwindow(tk.Tk):
       err = False
       while 1:
         try:
-          output = urllib2.urlopen(urllib2.Request("http://bukkit.pl/taigachat/list.json", urllib.urlencode({"_xfToken":token, "_xfResponseType":"json", "lastrefresh":ref})), timeout=10).read()
+          output = urllib2.urlopen(urllib2.Request("http://bukkit.pl/taigachat/list.json", urllib.urlencode({"_xfToken":token, "_xfResponseType":"json", "lastrefresh":ref})), timeout=timeout).read()
           global line
           global pisz
           global wiad
@@ -173,7 +177,7 @@ class chatwindow(tk.Tk):
             if not err:
               print(logczas() + "Blad pobierania wiadomosci: " +  str(e))
             err = True
-        time.sleep(2)
+        time.sleep(msgref)
 
     def playerlist(*args):
       while 1:
@@ -184,7 +188,7 @@ class chatwindow(tk.Tk):
         licz = -1
         dodaj = False
         try:
-          listparse().feed(json.loads(urllib2.urlopen(urllib2.Request("http://bukkit.pl/shoutbox/", urllib.urlencode({"_xfResponseType":"json", "_xfToken":token,})), timeout=10).read()).get("sidebarHtml"))
+          listparse().feed(json.loads(urllib2.urlopen(urllib2.Request("http://bukkit.pl/shoutbox/", urllib.urlencode({"_xfResponseType":"json", "_xfToken":token,})), timeout=timeout).read()).get("sidebarHtml"))
         except Exception as e:
           print(logczas() + "Blad podczas pobierania listy uzytkownikow: " +  str(e))
         lista.sort()
@@ -206,13 +210,14 @@ class chatwindow(tk.Tk):
           print(logczas() + strlista)
           break
         else:
-          time.sleep(4)
+          time.sleep(listref)
 
     thread.start_new_thread(getmsg, ("", ""))
     thread.start_new_thread(playerlist, ("diff", ""))
     
-    self.focus()
+    self.wm_attributes("-topmost", 1)
+    msgbox.focus_force()
 
 chatwindow().mainloop()
-urllib2.urlopen("http://bukkit.pl/logout/?" + urllib.urlencode({"_xfToken":token}), timeout=10)
+urllib2.urlopen("http://bukkit.pl/logout/?" + urllib.urlencode({"_xfToken":token}), timeout=timeout)
 sys.exit()
