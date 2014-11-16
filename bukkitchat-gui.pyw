@@ -122,7 +122,7 @@ class chatwindow(tk.Tk):
     tk.Tk.__init__(self)
     text = tk.Text(self, wrap="word", bg='white', state="disabled")
     text.pack(side="top", fill="both", expand=True)
-    self.title('Bukkit.pl shoutbox client by JuniorJPDJ')
+    self.title('Bukkit.pl shoutbox client by JuniorJPDJ v1.4')
     
     def send(*args):
       msg = unicode(msgbox.get()).encode("utf-8")
@@ -132,6 +132,8 @@ class chatwindow(tk.Tk):
         self.quit()
       elif msg == "/list" or msg == "/lista":
         playerlist("komenda")
+      elif msg == "/ver" or msg == "/version":
+        print(logczas() + "Posiadasz shoutbox bukkit.pl by JuniorJPDJ w wersji 1.4")
       else:
         try:
           urllib2.urlopen(urllib2.Request("http://bukkit.pl/taigachat/post.json", urllib.urlencode({"message":msg, "_xfToken":token, "_xfResponseType":"xml"})), timeout=timeout)

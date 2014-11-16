@@ -152,6 +152,8 @@ while 1:
     sys.exit()
   elif msg == "/list" or msg == "/lista":
     playerlist("komenda")
+  elif msg == "/ver" or msg == "/version":
+    print(logczas() + "Posiadasz shoutbox bukkit.pl by JuniorJPDJ w wersji 1.4")
   else:
     try:
       urllib2.urlopen(urllib2.Request("http://bukkit.pl/taigachat/post.json", urllib.urlencode({"message":msg, "_xfToken":token, "_xfResponseType":"xml"})), timeout=timeout)
