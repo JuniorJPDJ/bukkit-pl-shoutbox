@@ -1,225 +1,132 @@
+#!/usr/bin/python
+# coding: utf-8 
+import datetime, sys, shoutApi, time
+from threading import Thread
 import Tkinter as tk
-import urllib2, urllib, cookielib, json, sys, thread, time, datetime, HTMLParser, tkMessageBox
 
-cj = cookielib.LWPCookieJar()
-opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-urllib2.install_opener(opener)
-lista1 = []
+chathost = "http://bukkit.pl"
+logged = False
 
-listref = 4
-msgref = 2
-timeout = 10
+class asyncRun(Thread):
+  def __init__(self, what, *args):
+    Thread.__init__(self)
+    self.what = what
+    self.args = args
+    self.start()
+  def run(self):
+    self.what(*self.args)
 
-def logczas():
-  return "[" + str(datetime.datetime.now().time())[0:-10]+ "] "
+def printP(msg):
+  window.text.configure(state="normal")
+  window.text.insert("end", unicode(msg).encode("utf-8") + unicode(u"\n").encode("utf-8"))
+  window.text.see('end')
+  window.text.configure(state="disabled")
 
-class msgparse(HTMLParser.HTMLParser):
-  def handle_starttag(self, tag, attrs):
-    for attr in attrs:
-      if attr[0] == "data-timestring":
-        global czas
-        czas = attr[1]
-      elif attr[1] == "username":
-        global pisz
-        pisz = True
-      elif attr[0] == "alt":
-        if pisz:
-          global line
-          line = line + attr[1]
-  def handle_data(self, data):
-    global line
-    global pisz
-    if pisz:
-      line = line + data
-  def handle_endtag(self, tag):
-    if tag == "li":
-      global pisz
-      global czas
-      pisz = False
-      if czas != "":
-        global line
-        global wiad
-        line = "[" + czas + "] " + line
-        czas = ""
-        wiad = wiad + unicode(line).encode("utf-8") + "\n"
-      line = ""
-      
-class listparse(HTMLParser.HTMLParser):
-  def handle_starttag(self, tag, attrs):
-    global licz
-    for attr in attrs:
-      if attr[1] == 'listInline':
-        licz = licz + 1
-      elif attr[1] == 'username':
-        if licz == 1:
-          global dodaj
-          dodaj = True
-  def handle_endtag(self, tag):
-    global dodaj
-    dodaj = False
-  def handle_data(self, data):
-    if dodaj:
-      global lista
-      lista.append(data)
+def send(msg):
+  if logged:
+    User.send(unicode(msg).encode('utf-8'))
+  else:
+    printP(u'[INFO] Przed wysłaniem wiadomości zaloguj się do czatu za pomocą komendy "/login"!')
 
-class TextRedirector(object):
-  def __init__(self, widget):
-    self.widget = widget
-  def write(self, str):
-    self.widget.configure(state="normal")
-    self.widget.insert("end", str)
-    self.widget.see('end')
-    self.widget.configure(state="disabled")
+def onJoin(nick):
+  printP(datetime.datetime.now().strftime('[%H:%M:%S] ') + nick + u' dołączył do czatu')
 
+def onLeave(nick):
+  printP(datetime.datetime.now().strftime('[%H:%M:%S] ') + nick + u' opuścił czat')
 
-login = ''
-pw = ''
+def onMsg(time, sender, msg, new):
+  printP(datetime.datetime.fromtimestamp(int(time)).strftime('[%H:%M:%S] ')+sender+': '+msg)
 
-class loginwindow(tk.Tk):
-  def __init__(self):
-    tk.Tk.__init__(self)
-    self.title('Logowanie do shoutboxa')
-    self.resizable(0, 0)
-    self.geometry('300x135')
-    tk.Label(self, text="Zaloguj sie danymi z bukkit.pl\nJesli wpiszesz bledne dane lub zamkniesz to okno,\npoprostu nie bedziesz w stanie pisac na czacie").pack(side='top')
-    loginframe = tk.Frame(self)
-    tk.Label(loginframe, text="Login:", width=8).pack(side='left')
-    loginbox = tk.Entry(loginframe, width=25)
-    loginbox.pack(side="left")
-    loginbox.focus()
-    loginframe.pack(side='top', pady=2)
-    pwframe = tk.Frame(self)
-    tk.Label(pwframe, text="Haslo:", width=8).pack(side='left')
-    pwbox = tk.Entry(pwframe, show='*', width=25)
-    pwbox.pack(side='left')
-    pwframe.pack(side='top')
-    
-    self.protocol("WM_DELETE_WINDOW", sys.exit)
-    
-    def log(*args):
-      global login
-      global pw
-      login = loginbox.get()
-      pw = pwbox.get()
-      self.destroy()
-      self.quit()
-    loginbutton = tk.Button(self, text="Zaloguj", command=log, width=8).pack(side='top', pady=6)
-    self.bind('<Return>', log)
-    
-loginwindow().mainloop()
+def Quit():
+  printP(u'[INFO] Trwa wyłączanie klienta')
+  List.stop()
+  Reciever.stop()
+  User.logout()
+  window.destroy()
+  window.quit()
 
-try:
-  token = urllib2.urlopen(urllib2.Request("http://bukkit.pl/login/login", urllib.urlencode({"login":login, "password":pw, "cookie_check":"0", "register":"0", "remember":"1"})), timeout=timeout).read()
-  token = token[token.find('name="_xfToken')+23:]
-  token = token[:token.find('"')]
-except Exception as e:
-  print(logczas() + "Blad logowania do czatu: " +  str(e))
-  tkMessageBox.showerror("Blad logowania do czatu", "Blad logowania do czatu: " + str(e))
-  sys.exit()
+def onCommand(command, args):
+  if command.lower() == 'help' or command.lower() == 'h':
+    printP(u"[INFO] Lista dostępnych komend:\n"
+           u"[INFO] /l lub /login - pozwala się zalogować\n"
+           u"[INFO] /lo lub /logout - pozwala się wylogować\n"
+           u"[INFO] /ls lub /list - wyswietla liste graczy\n"
+           u"[INFO] /h lub /help - wyświetla ten komunikat\n"
+           u"[INFO] /q lub /quit - wyłącza czat\n"
+           u"[INFO] /ver lub /version - wyświetla wersję programu")
+  elif command.lower() == 'l' or command.lower() == 'login':
+    if len(args) == 2:
+      global logged
+      if not logged:
+        User.login(args[0], args[1])
+        if User.isLoggedIn:
+          logged = True
+          printP(u'[INFO] Zalogowano pomyślnie!')
+        else:
+          printP(u'[INFO] Błąd logowania, spróbuj ponownie')
+      else:
+        printP(u'[INFO] Jesteś już zalogowany, najpierw się wyloguj!')
+    else:
+      printP(u'[INFO] Błędne użycie komendy /login\n'
+             u'[INFO] Prawidłowe użycie: "/login NICK HASŁO"')
+  elif command.lower() == 'lo' or command.lower() == 'logout':
+    if not logged:
+      User.logout()
+      printP(u'[INFO] Wylogowano!')
+    else:
+      printP(u'[INFO] Przed wylogowaniem, wypadałoby się zalogować ;)')
+  elif command.lower() == 'quit' or command.lower() == 'q':
+    Quit()
+  elif command.lower() == 'list' or command.lower() == 'ls':
+    usrlist = u''
+    for usr in List.list():
+      usrlist += u' ' + usr
+    printP(u'[INFO] Lista osób uczestniczących w czacie:'+usrlist)
+  elif command.lower() == 'version' or command.lower() == 'ver':
+    printP(u'[INFO] Posiadasz shoutbox bukkit.pl by JuniorJPDJ w wersji 2.0')
+  else:
+    printP(u'[INFO] Nie ma takiej komendy ;c')
 
 class chatwindow(tk.Tk):
   def __init__(self):
     tk.Tk.__init__(self)
-    text = tk.Text(self, wrap="word", bg='white', state="disabled")
-    text.pack(side="top", fill="both", expand=True)
-    self.title('Bukkit.pl shoutbox client by JuniorJPDJ v1.4')
+    self.text = tk.Text(self, wrap="word", bg='white', state="disabled")
+    self.text.pack(side="top", fill="both", expand=True)
+    self.title('Shoutbox bukkit.pl by JuniorJPDJ v2.0')
     
-    def send(*args):
-      msg = unicode(msgbox.get()).encode("utf-8")
+    def sender(*args):
+      msg = msgbox.get()
       msgbox.delete(0,'end')
-      if msg == "/q" or msg == "/quit" or msg == "/exit":
-        self.destroy()
-        self.quit()
-      elif msg == "/list" or msg == "/lista":
-        playerlist("komenda")
-      elif msg == "/ver" or msg == "/version":
-        print(logczas() + "Posiadasz shoutbox bukkit.pl by JuniorJPDJ w wersji 1.4")
+      if msg.find('/') == 0:
+        args = msg.split(' ')
+        onCommand(args[0][1:], args[1:])
       else:
-        try:
-          urllib2.urlopen(urllib2.Request("http://bukkit.pl/taigachat/post.json", urllib.urlencode({"message":msg, "_xfToken":token, "_xfResponseType":"xml"})), timeout=timeout)
-        except Exception as e:
-          print(logczas() + "Blad wysylania wiadomosci: " +  str(e))
+        asyncRun(send, msg)
+      
     
-    przycisk = tk.Button(self, text="Wyslij", command=send, width=8)
+    przycisk = tk.Button(self, text="Wyślij", command=sender, width=8)
     przycisk.pack(side="right")
     
     msgbox = tk.Entry(self)
     msgbox.pack(side="top", fill="both")
     msgbox.focus()
-        
-    sys.stdout = TextRedirector(text)
     
-    self.bind('<Return>', send)
+    self.bind('<Return>', sender)
     
     self.update()
     self.minsize(self.winfo_width(), self.winfo_height())
     
-    def getmsg(*args):
-      ref = 0
-      err = False
-      while 1:
-        try:
-          output = urllib2.urlopen(urllib2.Request("http://bukkit.pl/taigachat/list.json", urllib.urlencode({"_xfToken":token, "_xfResponseType":"json", "lastrefresh":ref})), timeout=timeout).read()
-          global line
-          global pisz
-          global wiad
-          line = ""
-          pisz = False
-          wiad = ""
-          msgparse().feed(json.loads(output.replace("\\n","")).get("templateHtml"))
-          if wiad != "":
-            print(wiad),
-          ref = json.loads(output).get("lastrefresh")
-          if err:
-            print(logczas() + "Pomyslnie pobrano zalegle wiadomosci")
-            err = False
-        except KeyboardInterrupt:
-            pass
-        except Exception as e:
-            if not err:
-              print(logczas() + "Blad pobierania wiadomosci: " +  str(e))
-            err = True
-        time.sleep(msgref)
-
-    def playerlist(*args):
-      while 1:
-        global lista
-        global licz
-        global dodaj
-        lista = []
-        licz = -1
-        dodaj = False
-        try:
-          listparse().feed(json.loads(urllib2.urlopen(urllib2.Request("http://bukkit.pl/shoutbox/", urllib.urlencode({"_xfResponseType":"json", "_xfToken":token,})), timeout=timeout).read()).get("sidebarHtml"))
-        except Exception as e:
-          print(logczas() + "Blad podczas pobierania listy uzytkownikow: " +  str(e))
-        lista.sort()
-        global lista1
-        if lista1 != lista and lista1 != []:
-          for a in lista:
-            try:
-              lista1.remove(a)
-            except ValueError:
-              print(logczas() + a + " dolaczyl do czatu")
-          for a in lista1:
-            print(logczas() + a + " opuscil czat")
-        lista1 = lista
-        if args[0] == "komenda":
-          print(logczas() + "Aktualnie z czatu korzystaja: ")
-          strlista = ""
-          for a in lista:
-            strlista = strlista + a + " "
-          print(logczas() + strlista)
-          break
-        else:
-          time.sleep(listref)
-
-    thread.start_new_thread(getmsg, ("", ""))
-    thread.start_new_thread(playerlist, ("diff", ""))
-    
     self.wm_attributes("-topmost", 1)
     msgbox.focus_force()
+    
+    self.protocol("WM_DELETE_WINDOW", Quit)
 
-chatwindow().mainloop()
-urllib2.urlopen("http://bukkit.pl/logout/?" + urllib.urlencode({"_xfToken":token}), timeout=timeout)
+window = chatwindow()
+
+User = shoutApi.ChatUser(chathost)
+Reciever = shoutApi.ChatReciever(chathost, onMsg)
+List = shoutApi.ChatUserList(chathost, onJoin, onLeave)
+
+window.mainloop()
+
 sys.exit()
