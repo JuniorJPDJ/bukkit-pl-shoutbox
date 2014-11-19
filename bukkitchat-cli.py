@@ -1,7 +1,8 @@
 #!/usr/bin/python
 # coding: utf-8 
-import datetime, sys, shoutApi, time
+import datetime, sys, time
 from threading import Thread
+from libs import shoutApi
 
 chathost = "http://bukkit.pl"
 logged = False
@@ -90,8 +91,11 @@ def onCommand(command, args):
     printP(u'[INFO] Nie ma takiej komendy ;c')
 
 User = shoutApi.ChatUser(chathost)
-Reciever = shoutApi.ChatReciever(chathost, onMsg)
-List = shoutApi.ChatUserList(chathost, onJoin, onLeave)
+Reciever = shoutApi.ChatReciever(chathost)
+List = shoutApi.ChatUserList(chathost)
+Reciever.regHandler('msg', onMsg)
+List.regHandler('join', onJoin)
+List.regHandler('leave', onLeave)
 
 while 1:
   try:

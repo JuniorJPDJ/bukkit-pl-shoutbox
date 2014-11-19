@@ -1,7 +1,8 @@
 #!/usr/bin/python
 # coding: utf-8 
-import datetime, sys, shoutApi, time
+import datetime, sys, time
 from threading import Thread
+from libs import shoutApi
 import Tkinter as tk
 
 chathost = "http://bukkit.pl"
@@ -29,10 +30,10 @@ def send(msg):
     printP(u'[INFO] Przed wysłaniem wiadomości zaloguj się do czatu za pomocą komendy "/login"!')
 
 def onJoin(nick):
-  printP(datetime.datetime.now().strftime('[%H:%M:%S] ') + nick + u' dołączył do czatu')
+  printP(u'[INFO] ' + nick + u' dołączył do czatu')
 
 def onLeave(nick):
-  printP(datetime.datetime.now().strftime('[%H:%M:%S] ') + nick + u' opuścił czat')
+  printP(u'[INFO] ' + nick + u' opuścił czat')
 
 def onMsg(time, sender, msg, new):
   printP(datetime.datetime.fromtimestamp(int(time)).strftime('[%H:%M:%S] ')+sender+': '+msg)
@@ -112,20 +113,21 @@ class chatwindow(tk.Tk):
     msgbox.focus()
     
     self.bind('<Return>', sender)
+    self.protocol("WM_DELETE_WINDOW", Quit)
     
     self.update()
     self.minsize(self.winfo_width(), self.winfo_height())
     
-    self.wm_attributes("-topmost", 1)
     msgbox.focus_force()
-    
-    self.protocol("WM_DELETE_WINDOW", Quit)
 
 window = chatwindow()
 
 User = shoutApi.ChatUser(chathost)
-Reciever = shoutApi.ChatReciever(chathost, onMsg)
-List = shoutApi.ChatUserList(chathost, onJoin, onLeave)
+Reciever = shoutApi.ChatReciever(chathost)
+List = shoutApi.ChatUserList(chathost)
+Reciever.regHandler('msg', onMsg)
+List.regHandler('join', onJoin)
+List.regHandler('leave', onLeave)
 
 window.mainloop()
 
